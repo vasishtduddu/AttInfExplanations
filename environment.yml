@@ -1,0 +1,13 @@
+name: attinf-explanations
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3
+  - matplotlib
+  - captum
+  - pandas
+  - pytorch=1.6.0
+  - scipy
+  - torchvision
