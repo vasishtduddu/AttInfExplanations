@@ -79,30 +79,25 @@ def attinfattack(X_adv_train, Z_adv_train, X_adv_test, Z_adv_test, args, log):
     z_pred_sex_prob = attack_model_sex.predict_proba(attack_model_input)
     z_pred_sex_prob = z_pred_sex_prob[:, 1]
 
-    # get the best threshold for AUC-ROC Curve: RACE
-    fpr_race, tpr_race, thresholds_race = roc_curve(Z_adv_train['race'], z_pred_race_prob)
-    best_thresh_race = thresholds_race[argmax(tpr_race - fpr_race)]
-    log.info("Best Threshold for RACE attribute for AUC ROC Curve: {}".format(best_thresh_race))
-
-    # get the best threshold for AUC-ROC Curve: SEX
-    fpr_sex, tpr_sex, thresholds_sex = roc_curve(Z_adv_train['sex'], z_pred_sex_prob)
-    best_thresh_sex = thresholds_sex[argmax(tpr_sex - fpr_sex)]
-    log.info("Best Threshold for SEX attribute: {}".format(best_thresh_sex))
-
     # get the best threshold for Precision Recall Curve: RACE
     precision_race, recall_race, thresholds_race_pr = precision_recall_curve(Z_adv_train['race'], z_pred_race_prob)
     fscore_race = (2 * precision_race * recall_race) / (precision_race + recall_race)
-    best_thresh_race = thresholds_race_pr[argmax(fscore_race)]
-    best_fscore_race = fscore_race[argmax(fscore_race)]
-    log.info('Best Threshold for RACE attribute (Precision Recall)= {}, F-Score= {}'.format(best_thresh_race, best_fscore_race))
+    if np.isnan(fscore_race).any():
+        best_thresh_race = 0.5
+    else:
+        best_thresh_race = thresholds_race_pr[argmax(fscore_race)]
+        best_fscore_race = fscore_race[argmax(fscore_race)]
+        log.info('Best Threshold for RACE attribute (Precision Recall)= {}, F-Score= {}'.format(best_thresh_race, best_fscore_race))
 
     # get the best threshold for Precision Recall Curve: SEX
     precision_sex, recall_sex, thresholds_sex_pr = precision_recall_curve(Z_adv_train['sex'], z_pred_sex_prob)
     fscore_sex = (2 * precision_sex * recall_sex) / (precision_sex + recall_sex)
-    best_thresh_sex = thresholds_sex_pr[argmax(fscore_sex)]
-    best_score_sex = fscore_sex[argmax(fscore_sex)]
-    log.info('Best Threshold for SEX attribute (Precision Recall)= {}, F-Score= {}'.format(best_thresh_sex, best_score_sex))
-
+    if np.isnan(fscore_sex).any():
+        best_thresh_sex = 0.5
+    else:
+        best_thresh_sex = thresholds_sex_pr[argmax(fscore_sex)]
+        best_score_sex = fscore_sex[argmax(fscore_sex)]
+        log.info('Best Threshold for SEX attribute (Precision Recall)= {}, F-Score= {}'.format(best_thresh_sex, best_score_sex))
 
     # thresholding on test dataset
     attack_model_input = pd.DataFrame(X_adv_test)
@@ -137,3 +132,67 @@ def attinfattack(X_adv_train, Z_adv_train, X_adv_test, Z_adv_test, args, log):
     plt.legend(loc="best")
     plt.grid()
     plt.savefig("./fairadv_pr_{}_{}_{}_{}.pdf".format(args.dataset,args.with_sattr,args.attfeature,args.explanations), bbox_inches = 'tight',pad_inches = 0, dpi=400)
+
+
+
+def attinfattack_featimp(X_adv_train_race, Z_adv_train_race, X_adv_test_race, Z_adv_test_race, X_adv_train_sex, Z_adv_train_sex, X_adv_test_sex, Z_adv_test_sex, args, log):
+
+    if args.dataset == "LAW":
+        attack_model_race = RandomForestClassifier(max_depth=150, random_state=1337)
+    else:
+        attack_model_race = MLPClassifier(solver='adam', alpha=1e-3, hidden_layer_sizes=(64,128,32,), verbose=0, max_iter=500,random_state=1337)
+    attack_model_input = pd.DataFrame(X_adv_train_race)
+    attack_model_race.fit(X_adv_train_race, Z_adv_train_race)
+    z_pred_race_prob = attack_model_race.predict_proba(attack_model_input)
+    z_pred_race_prob = z_pred_race_prob[:, 1]
+
+    if args.dataset == "LAW":
+        attack_model_sex = RandomForestClassifier(max_depth=150, random_state=1337)
+    else:
+        attack_model_sex = MLPClassifier(solver='adam', alpha=1e-3, hidden_layer_sizes=(64,128,32,), verbose=0, max_iter=500,random_state=1337)
+    attack_model_sex.fit(X_adv_train_sex, Z_adv_train_sex)
+    z_pred_sex_prob = attack_model_sex.predict_proba(attack_model_input)
+    z_pred_sex_prob = z_pred_sex_prob[:, 1]
+
+
+    # get the best threshold for Precision Recall Curve: RACE
+    precision_race, recall_race, thresholds_race_pr = precision_recall_curve(Z_adv_train_race, z_pred_race_prob)
+    fscore_race = (2 * precision_race * recall_race) / (precision_race + recall_race)
+    if np.isnan(fscore_race).any():
+        best_thresh_race = 0.5
+    else:
+        best_thresh_race = thresholds_race_pr[argmax(fscore_race)]
+        best_fscore_race = fscore_race[argmax(fscore_race)]
+        log.info('Best Threshold for RACE attribute (Precision Recall)= {}, F-Score= {}, Precision {}, Recall {}'.format(best_thresh_race, best_fscore_race,precision_race[argmax(fscore_race)],recall_race[argmax(fscore_race)]))
+
+    # get the best threshold for Precision Recall Curve: SEX
+    precision_sex, recall_sex, thresholds_sex_pr = precision_recall_curve(Z_adv_train_sex, z_pred_sex_prob)
+    fscore_sex = (2 * precision_sex * recall_sex) / (precision_sex + recall_sex)
+    if np.isnan(fscore_sex).any():
+        best_thresh_sex = 0.5
+    else:
+        best_thresh_sex = thresholds_sex_pr[argmax(fscore_sex)]
+        best_score_sex = fscore_sex[argmax(fscore_sex)]
+        log.info('Best Threshold for SEX attribute (Precision Recall)= {}, F-Score= {}, Precision {}, Recall {}'.format(best_thresh_sex, best_score_sex,precision_sex[argmax(fscore_race)],recall_sex[argmax(fscore_race)]))
+
+
+    # thresholding on test dataset
+    attack_model_input = pd.DataFrame(X_adv_test_sex)
+    z_pred_sex_prob = attack_model_sex.predict_proba(attack_model_input)
+    z_pred_sex_prob = z_pred_sex_prob[:, 1]
+    attack_model_input = pd.DataFrame(X_adv_test_race)
+    z_pred_race_prob = attack_model_race.predict_proba(attack_model_input)
+    z_pred_race_prob = z_pred_race_prob[:, 1]
+
+    z_pred_race = z_pred_race_prob > best_thresh_race
+    z_pred_sex = z_pred_sex_prob > best_thresh_sex
+
+    log.info("####### Attack Success on Race Attribute #######")
+    log.info("Recall: {}".format(recall_score(Z_adv_test_race, z_pred_race)))
+    log.info("Precision: {}".format(precision_score(Z_adv_test_race, z_pred_race)))
+    log.info("F1 Score: {}".format(f1_score(Z_adv_test_race, z_pred_race)))
+
+    log.info("####### Attack Success on Gender Attribute #######")
+    log.info("Recall: {}".format(recall_score(Z_adv_test_sex, z_pred_sex)))
+    log.info("Precision: {}".format(precision_score(Z_adv_test_sex, z_pred_sex)))
+    log.info("F1 Score: {}".format(f1_score(Z_adv_test_sex, z_pred_sex)))

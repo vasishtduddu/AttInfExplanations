@@ -13,6 +13,7 @@ from torchvision import datasets
 import torch.utils.data as Data
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
@@ -59,10 +60,8 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
         log.error(msg_dataset_error)
         raise EnvironmentError(msg_dataset_error)
 
-    if args.with_sattr == True:
-        log.info("Concatenating sensitive attributes to the main features")
-        X = pd.concat([X, Z], axis=1)
-
+    log.info("Concatenating sensitive attributes to the main features")
+    X = pd.concat([X, Z], axis=1)
     model = models.BinaryNet(X.shape[1])
 
     sc = StandardScaler()
@@ -97,28 +96,23 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
         attributions_train, delta_train = ig.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
         attributions_test, delta_test = ig.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
 
-
     elif args.explanations == "DeepLift":
         dl = DeepLift(model)
-        attributions_train, delta_train = dl.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
-        attributions_test, delta_test = dl.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
+        attributions_train, _ = dl.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
+        attributions_test, _ = dl.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
 
     elif args.explanations == "GradientShap":
         gs = GradientShap(model)
         baseline_dist_train = torch.randn(input_train.size()) * 0.001
         baseline_dist_test = torch.randn(input_test.size()) * 0.001
-        attributions_train, delta_train = gs.attribute(input_train, stdevs=0.09, n_samples=4, baselines=baseline_dist_train,target=0, return_convergence_delta=True)
-        delta_train = torch.mean(delta_train.reshape(input_train.shape[0], -1), dim=1)
-        attributions_test, delta_test = gs.attribute(input_test, stdevs=0.09, n_samples=4, baselines=baseline_dist_test,target=0, return_convergence_delta=True)
-        delta_test = torch.mean(delta_test.reshape(input_test.shape[0], -1), dim=1)
+        attributions_train, _ = gs.attribute(input_train, stdevs=0.09, n_samples=4, baselines=baseline_dist_train,target=0, return_convergence_delta=True)
+        attributions_test, _ = gs.attribute(input_test, stdevs=0.09, n_samples=4, baselines=baseline_dist_test,target=0, return_convergence_delta=True)
 
     elif args.explanations == "smoothgrad":
         ig = IntegratedGradients(model)
         nt = NoiseTunnel(ig)
-        attributions_train, delta_train = nt.attribute(input_train, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_train, target=0, return_convergence_delta=True)
-        delta_train = torch.mean(delta_train.reshape(input_train.shape[0], -1), dim=1)
-        attributions_test, delta_test = nt.attribute(input_test, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_test, target=0, return_convergence_delta=True)
-        delta_test = torch.mean(delta_test.reshape(input_test.shape[0], -1), dim=1)
+        attributions_train, _ = nt.attribute(input_train, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_train, target=0, return_convergence_delta=True)
+        attributions_test, _ = nt.attribute(input_test, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_test, target=0, return_convergence_delta=True)
 
     else:
         msg_algo_error: str = "No such algorithm"
@@ -126,44 +120,33 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
         raise EnvironmentError(msg_algo_error)
 
 
-    # attribute inference attack [explanations only, prediction+ explanations] with and without sensitive attribute in training dataset
-    if args.attfeature == "expl":
-        attributions_train = attributions_train.detach().numpy()
-        delta_train = delta_train.numpy()
-        delta_train = np.expand_dims(delta_train, axis=0)
-        X_adv_train = np.concatenate((attributions_train, delta_train.T), axis=1)
+    # attribute inference attack correlation with feature importance
+    attributions_train = attributions_train.detach().numpy()
+    attributions_test = attributions_test.detach().numpy()
 
-        attributions_test = attributions_test.detach().numpy()
-        delta_test = delta_test.numpy()
-        delta_test = np.expand_dims(delta_test, axis=0)
-        X_adv_test = np.concatenate((attributions_test, delta_test.T), axis=1)
+    X_adv_train_race = []
+    X_adv_train_sex = []
+    for i in attributions_train:
+        X_adv_train_race.append(i[-2])
+        X_adv_train_sex.append(i[-1])
 
-        utils.attinfattack(X_adv_train, Z_adv_train, X_adv_test, Z_adv_test, args, log)
+    X_adv_test_race = []
+    X_adv_test_sex = []
+    for i in attributions_test:
+        X_adv_test_race.append(i[-2])
+        X_adv_test_sex.append(i[-1])
 
-    elif args.attfeature == "both":
-        model.eval()
-        predictions_train = model(torch.from_numpy(X_adv_train).type(torch.FloatTensor))
-        predictions_train = predictions_train.detach().numpy()
-        attributions_train = attributions_train.detach().numpy()
-        delta_train = delta_train.numpy()
-        delta_train = np.expand_dims(delta_train, axis=0)
-        conc_train = np.concatenate((attributions_train, predictions_train), axis=1)
-        X_adv_train = np.concatenate((conc_train, delta_train.T), axis=1)
+    X_adv_train_race = np.array(X_adv_train_race)
+    X_adv_train_sex = np.array(X_adv_train_sex)
+    X_adv_test_race = np.array(X_adv_test_race)
+    X_adv_test_sex = np.array(X_adv_test_sex)
 
-        predictions_test = model(torch.from_numpy(X_adv_test).type(torch.FloatTensor))
-        predictions_test = predictions_test.detach().numpy()
-        attributions_test = attributions_test.detach().numpy()
-        delta_test = delta_test.numpy()
-        delta_test = np.expand_dims(delta_test, axis=0)
-        conc_test = np.concatenate((attributions_train, predictions_train), axis=1)
-        X_adv_test = np.concatenate((conc_test, delta_test.T), axis=1)
+    Z_adv_train_race = Z_adv_train['race'].to_numpy()
+    Z_adv_train_sex = Z_adv_train['sex'].to_numpy()
+    Z_adv_test_race = Z_adv_test['race'].to_numpy()
+    Z_adv_test_sex = Z_adv_test['sex'].to_numpy()
 
-        utils.attinfattack(X_adv_train, Z_adv_train, X_adv_test, Z_adv_test, args, log)
-
-    else:
-        msg_config_error: str = "No such configuration"
-        log.error(msg_config_error)
-        raise EnvironmentError(msg_config_error)
+    utils.attinfattack_featimp(X_adv_train_race.reshape(-1, 1), Z_adv_train_race, X_adv_test_race.reshape(-1, 1), Z_adv_test_race, X_adv_train_sex.reshape(-1, 1), Z_adv_train_sex, X_adv_test_sex.reshape(-1, 1), Z_adv_test_sex, args, log)
 
 
 def handle_args() -> argparse.Namespace:
@@ -172,21 +155,19 @@ def handle_args() -> argparse.Namespace:
     parser.add_argument('--raw_path', type=str, default="data/", help='Root directory of the dataset')
     parser.add_argument('--dataset', type=str, default="LFW", help='Options: LAW, CREDIT, COMPAS, CENSUS')
     parser.add_argument('--explanations', type=str, default="IntegratedGradients", help='Options: IntegratedGradients,smoothgrad,DeepLift,GradientShap')
-    parser.add_argument('--with_sattr', type=bool, default=False, help='Includes the sensitive attributes to the main features for tabular data')
     parser.add_argument("--lr", type = float, default = 1e-3, help = "Learning Rate")
     parser.add_argument("--decay", type = float, default = 0, help = "Weight decay/L2 Regularization")
     parser.add_argument("--batch_size", type = int, default = 128, help = "Batch size for training data")
     parser.add_argument("--device", type = str, default = torch.device('cuda' if torch.cuda.is_available() else 'cpu'), help = "GPU/CPU")
     parser.add_argument("--save", type = bool, default = True, help = "Save model")
     parser.add_argument("--epochs", type = int, default = 30, help = "Number of Model Training Iterations")
-    parser.add_argument('--attfeature', type=str, default="expl", help='Options: expl, both')
 
     args: argparse.Namespace = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, filename="attack_attrinf.log", filemode="w")
+    logging.basicConfig(level=logging.INFO, filename="attrinf_featimp.log", filemode="w")
     log: logging.Logger = logging.getLogger("AttributeInference")
     args = handle_args()
     main(args, log)
