@@ -146,7 +146,7 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
     Z_adv_test_race = Z_adv_test['race'].to_numpy()
     Z_adv_test_sex = Z_adv_test['sex'].to_numpy()
 
-    utils.attinfattack_featimp(X_adv_train_race.reshape(-1, 1), Z_adv_train_race, X_adv_test_race.reshape(-1, 1), Z_adv_test_race, X_adv_train_sex.reshape(-1, 1), Z_adv_train_sex, X_adv_test_sex.reshape(-1, 1), Z_adv_test_sex, args, log)
+    utils.attinf_fides_phi_s(X_adv_train_race.reshape(-1, 1), Z_adv_train_race, X_adv_test_race.reshape(-1, 1), Z_adv_test_race, X_adv_train_sex.reshape(-1, 1), Z_adv_train_sex, X_adv_test_sex.reshape(-1, 1), Z_adv_test_sex, args, log)
 
 
 def handle_args() -> argparse.Namespace:
@@ -167,7 +167,7 @@ def handle_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, filename="attrinf_featimp.log", filemode="w")
-    log: logging.Logger = logging.getLogger("AttributeInference")
+    logging.basicConfig(level=logging.INFO, filename="fides_phi_s.log", filemode="w")
+    log: logging.Logger = logging.getLogger("FidesPhi(S)")
     args = handle_args()
     main(args, log)

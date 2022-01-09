@@ -34,6 +34,22 @@ Link to datasets: https://drive.google.com/drive/folders/1bUH02Y9I6_NVrfo5_8PwWt
 
 ## Usage
 
+### Baseline attribute inference attacks with threshold of 0.5 for attack model
+
+
+Baseline attack without sensitive attribute
+
+```bash
+python -m src.baseline --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
+```
+
+Baseline attack with sensitive attribute
+
+```bash
+python -m src.baseline --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap} --with_sattr True
+```
+
+
 ### Evaluate attribute inference attacks of against explanations
 
 ```bash
@@ -43,12 +59,19 @@ attfeature evaluates the attacks on only explanations (expl) or both predictions
 
 ### FIDES tool for quantifying privacy risk to sensitive attributes
 
+Worst case attribute privacy risk estimation by including model explanations for both non-sensitive and sensitive attributes.
+
 ```bash
 python -m src.attribute_inference --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap} --attfeature expl --with_sattr True
 ```
 
+Scores assigned using model explanations but only corresponding to sensitive attributes.
 ```bash
-python -m src.attinf_featimp --dataset CENSUS --explanations smoothgrad
+python -m src.fides_phi_s --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
 ```
 
-Remarks: In some runs, precision results may be zero. Usually re-executing fixes this and for LAW dataset increasing the size of the test dataset.
+### FIDES computation overhead
+
+```bash
+python -m src.perfeval_fides --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
+```

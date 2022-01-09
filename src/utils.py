@@ -135,7 +135,7 @@ def attinfattack(X_adv_train, Z_adv_train, X_adv_test, Z_adv_test, args, log):
 
 
 
-def attinfattack_featimp(X_adv_train_race, Z_adv_train_race, X_adv_test_race, Z_adv_test_race, X_adv_train_sex, Z_adv_train_sex, X_adv_test_sex, Z_adv_test_sex, args, log):
+def attinf_fides_phi_s(X_adv_train_race, Z_adv_train_race, X_adv_test_race, Z_adv_test_race, X_adv_train_sex, Z_adv_train_sex, X_adv_test_sex, Z_adv_test_sex, args, log):
 
     if args.dataset == "LAW":
         attack_model_race = RandomForestClassifier(max_depth=150, random_state=1337)
@@ -196,3 +196,37 @@ def attinfattack_featimp(X_adv_train_race, Z_adv_train_race, X_adv_test_race, Z_
     log.info("Recall: {}".format(recall_score(Z_adv_test_sex, z_pred_sex)))
     log.info("Precision: {}".format(precision_score(Z_adv_test_sex, z_pred_sex)))
     log.info("F1 Score: {}".format(f1_score(Z_adv_test_sex, z_pred_sex)))
+
+
+
+def baseline_attack(X_adv_train, Z_adv_train, X_adv_test, Z_adv_test, args, log):
+
+
+    if args.dataset == "LAW":
+        attack_model_race = RandomForestClassifier(max_depth=150, random_state=1337)
+    else:
+        attack_model_race = MLPClassifier(solver='adam', alpha=1e-3, hidden_layer_sizes=(64,128,32,), verbose=0, max_iter=500,random_state=1337)
+    attack_model_input = pd.DataFrame(X_adv_train)
+    attack_model_race.fit(X_adv_train, Z_adv_train['race'])
+
+    if args.dataset == "LAW":
+        attack_model_sex = RandomForestClassifier(max_depth=150, random_state=1337)
+    else:
+        attack_model_sex = MLPClassifier(solver='adam', alpha=1e-3, hidden_layer_sizes=(64,128,32,), verbose=0, max_iter=500,random_state=1337)
+    attack_model_sex.fit(X_adv_train, Z_adv_train['sex'])
+
+
+    # thresholding on test dataset
+    attack_model_input = pd.DataFrame(X_adv_test)
+    z_pred_sex = attack_model_sex.predict(attack_model_input)
+    z_pred_race = attack_model_race.predict(attack_model_input)
+
+    log.info("####### Attack Success on Race Attribute #######")
+    log.info("Recall: {}".format(recall_score(Z_adv_test['race'], z_pred_race)))
+    log.info("Precision: {}".format(precision_score(Z_adv_test['race'], z_pred_race)))
+    log.info("F1 Score: {}".format(f1_score(Z_adv_test['race'], z_pred_race)))
+
+    log.info("####### Attack Success on Gender Attribute #######")
+    log.info("Recall: {}".format(recall_score(Z_adv_test['sex'], z_pred_sex)))
+    log.info("Precision: {}".format(precision_score(Z_adv_test['sex'], z_pred_sex)))
+    log.info("F1 Score: {}".format(f1_score(Z_adv_test['sex'], z_pred_sex)))
