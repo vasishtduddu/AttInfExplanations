@@ -12,4 +12,5 @@ dependencies:
   - scipy
   - torchvision
   - pip
-    - sklearn
+  - pip:
+    - scikit-learn
