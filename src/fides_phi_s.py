@@ -63,7 +63,8 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
     log.info("Concatenating sensitive attributes to the main features")
     X = pd.concat([X, Z], axis=1)
     model = models.BinaryNet(X.shape[1])
-
+    model = model.to(args.device)
+    
     sc = StandardScaler()
     X_scaled = sc.fit_transform(X)
     X_scaled = pd.DataFrame(X_scaled, columns=X.columns)
