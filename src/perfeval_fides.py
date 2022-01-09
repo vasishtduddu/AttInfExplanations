@@ -150,7 +150,7 @@ def handle_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, filename="attrinf_featimp.log", filemode="w")
-    log: logging.Logger = logging.getLogger("AttributeInference")
+    logging.basicConfig(level=logging.INFO, filename="perfeval.log", filemode="w")
+    log: logging.Logger = logging.getLogger("PerfEval")
     args = handle_args()
     main(args, log)
