@@ -34,21 +34,6 @@ Link to datasets: https://drive.google.com/drive/folders/1bUH02Y9I6_NVrfo5_8PwWt
 
 ## Usage
 
-### Baseline attribute inference attacks with threshold of 0.5 for attack model
-
-
-Baseline attack without sensitive attribute
-
-```bash
-python -m src.baseline --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
-```
-
-Baseline attack with sensitive attribute
-
-```bash
-python -m src.baseline --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap} --with_sattr True
-```
-
 
 ### Evaluate attribute inference attacks of against explanations
 
