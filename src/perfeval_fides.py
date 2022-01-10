@@ -100,26 +100,21 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
         if args.explanations == "IntegratedGradients":
             ig = IntegratedGradients(model)
             attributions_train, delta_train = ig.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
-            # attributions_test, delta_test = ig.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
 
         elif args.explanations == "DeepLift":
             dl = DeepLift(model)
             attributions_train, _ = dl.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
-            # attributions_test, _ = dl.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
 
         elif args.explanations == "GradientShap":
             gs = GradientShap(model)
             baseline_dist_train = torch.randn(input_train.size()) * 0.001
-            # baseline_dist_test = torch.randn(input_test.size()) * 0.001
             attributions_train, _ = gs.attribute(input_train, stdevs=0.09, n_samples=4, baselines=baseline_dist_train,target=0, return_convergence_delta=True)
-            # attributions_test, _ = gs.attribute(input_test, stdevs=0.09, n_samples=4, baselines=baseline_dist_test,target=0, return_convergence_delta=True)
-
+          
         elif args.explanations == "smoothgrad":
             ig = IntegratedGradients(model)
             nt = NoiseTunnel(ig)
             attributions_train, _ = nt.attribute(input_train, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_train, target=0, return_convergence_delta=True)
-            # attributions_test, _ = nt.attribute(input_test, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_test, target=0, return_convergence_delta=True)
-
+   
         else:
             msg_algo_error: str = "No such algorithm"
             log.error(msg_algo_error)
