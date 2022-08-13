@@ -1,6 +1,6 @@
 # Inferring Sensitive Attributed from Model Explanations
 
-Code for the paper titled "Inferring Sensitive Attributed from Model Explanations" published in ACM CIKM 2022.
+Code for the paper titled "Inferring Sensitive Attributes from Model Explanations" published in ACM CIKM 2022.
 
 ## Requirements
 
