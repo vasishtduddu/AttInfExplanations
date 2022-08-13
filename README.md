@@ -1,5 +1,6 @@
 # Inferring Sensitive Attributed from Model Explanations
 
+Code for the paper titled "Inferring Sensitive Attributed from Model Explanations" published in ACM CIKM 2022.
 
 ## Requirements
 
@@ -42,21 +43,14 @@ python -m src.attribute_inference --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --ex
 ```
 attfeature evaluates the attacks on only explanations (expl) or both predictions and explanations (both)
 
-### FIDES tool for quantifying privacy risk to sensitive attributes
-
-Worst case attribute privacy risk estimation by including model explanations for both non-sensitive and sensitive attributes.
+### Attacking using entire explanations for both sensitive and non-sensitive attributes
 
 ```bash
 python -m src.attribute_inference --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap} --attfeature expl --with_sattr True
 ```
 
-Scores assigned using model explanations but only corresponding to sensitive attributes.
+### Attacking using only explanations corresponding to sensitive attributes
+
 ```bash
 python -m src.fides_phi_s --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
-```
-
-### FIDES computation overhead
-
-```bash
-python -m src.perfeval_fides --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
 ```
