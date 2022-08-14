@@ -52,5 +52,5 @@ python -m src.attribute_inference --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --ex
 ### Attacking using only explanations corresponding to sensitive attributes
 
 ```bash
-python -m src.fides_phi_s --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
+python -m src.infer_s_from_phis --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --explanations {IntegratedGradients,smoothgrad,DeepLift,GradientShap}
 ```
