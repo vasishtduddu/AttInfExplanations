@@ -1,29 +1,18 @@
 import argparse
 import logging
 from pathlib import Path
-from matplotlib import pyplot as plt
-from typing import List, Optional, Dict, Tuple
 import numpy as np
 import pandas as pd
-from numpy import argmax
 import torch
-import torch.nn as nn
-import torchvision
-from torchvision import datasets
 import torch.utils.data as Data
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-from captum.attr import GradientShap,DeepLift,DeepLiftShap,IntegratedGradients,NoiseTunnel
+from captum.attr import GradientShap,DeepLift,IntegratedGradients,NoiseTunnel
 
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import recall_score, precision_score,f1_score, balanced_accuracy_score, accuracy_score, plot_roc_curve, roc_curve, precision_recall_curve
 
 from . import data
 from . import models
@@ -71,7 +60,8 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
     le = LabelEncoder()
     y = le.fit_transform(y)
     (X_train, X_test, y_train, y_test, Z_train, Z_test) = train_test_split(X, y, Z, test_size=0.3, random_state=1337)
-    X_train, X_test, y_train, y_test, Z_train, Z_test = X_train.to_numpy(), X_test.to_numpy(), y_train, y_test, Z_train, Z_test
+    X_train, X_test, y_train, y_test, Z_train, Z_test = X_train.to_numpy().astype(np.float32), X_test.to_numpy().astype(np.float32), y_train.astype(int), y_test.astype(int), Z_train.astype(int), Z_test.astype(int)
+
 
     traindata = Data.TensorDataset(torch.from_numpy(X_train).type(torch.FloatTensor), torch.from_numpy(y_train).type(torch.LongTensor))
     testdata = Data.TensorDataset(torch.from_numpy(X_test).type(torch.FloatTensor), torch.from_numpy(y_test).type(torch.LongTensor))
@@ -92,28 +82,31 @@ def main(args: argparse.Namespace, log: logging.Logger) -> None:
     baseline_test = torch.mean(input_test,dim=0) # use the mean vector across all instances as the baseline instance
     baseline_test = baseline_test.repeat(input_test.size()[0], 1)
 
+    target_train = torch.from_numpy(y_adv_train)
+    target_test = torch.from_numpy(y_adv_test)
+
     if args.explanations == "IntegratedGradients":
         ig = IntegratedGradients(model)
-        attributions_train, delta_train = ig.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
-        attributions_test, delta_test = ig.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
+        attributions_train, delta_train = ig.attribute(input_train, baseline_train, target=target_train, return_convergence_delta=True)
+        attributions_test, delta_test = ig.attribute(input_test, baseline_test, target=target_test, return_convergence_delta=True)
 
     elif args.explanations == "DeepLift":
         dl = DeepLift(model)
-        attributions_train, _ = dl.attribute(input_train, baseline_train, target=0, return_convergence_delta=True)
-        attributions_test, _ = dl.attribute(input_test, baseline_test, target=0, return_convergence_delta=True)
+        attributions_train, _ = dl.attribute(input_train, baseline_train, target=target_train, return_convergence_delta=True)
+        attributions_test, _ = dl.attribute(input_test, baseline_test, target=target_test, return_convergence_delta=True)
 
     elif args.explanations == "GradientShap":
         gs = GradientShap(model)
         baseline_dist_train = torch.randn(input_train.size()) * 0.001
         baseline_dist_test = torch.randn(input_test.size()) * 0.001
-        attributions_train, _ = gs.attribute(input_train, stdevs=0.09, n_samples=4, baselines=baseline_dist_train,target=0, return_convergence_delta=True)
-        attributions_test, _ = gs.attribute(input_test, stdevs=0.09, n_samples=4, baselines=baseline_dist_test,target=0, return_convergence_delta=True)
+        attributions_train, _ = gs.attribute(input_train, stdevs=0.09, n_samples=4, baselines=baseline_dist_train,target=target_train, return_convergence_delta=True)
+        attributions_test, _ = gs.attribute(input_test, stdevs=0.09, n_samples=4, baselines=baseline_dist_test,target=target_test, return_convergence_delta=True)
 
     elif args.explanations == "smoothgrad":
         ig = IntegratedGradients(model)
         nt = NoiseTunnel(ig)
-        attributions_train, _ = nt.attribute(input_train, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_train, target=0, return_convergence_delta=True)
-        attributions_test, _ = nt.attribute(input_test, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_test, target=0, return_convergence_delta=True)
+        attributions_train, _ = nt.attribute(input_train, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_train, target=target_train, return_convergence_delta=True)
+        attributions_test, _ = nt.attribute(input_test, nt_type='smoothgrad', stdevs=0.02, nt_samples=4,baselines=baseline_test, target=target_test, return_convergence_delta=True)
 
     else:
         msg_algo_error: str = "No such algorithm"
