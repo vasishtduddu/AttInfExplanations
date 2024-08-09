@@ -1,4 +1,4 @@
-# Inferring Sensitive Attributed from Model Explanations
+# Inferring Sensitive Attributes from Model Explanations
 
 Code for the paper titled "Inferring Sensitive Attributes from Model Explanations" published in ACM CIKM 2022.
 
@@ -57,6 +57,6 @@ python -m src.infer_s_from_phis --dataset {LAW,MEPS,CENSUS,CREDIT,COMPAS} --expl
 
 ### Update (2024): Bug Fix
 
-There was a bug in the parameter for the attributions where the target was initially set to 0 but target has to be set to the class for the input. This has been updated.
-The attack accuracies are different and results in several cases are better than reported in the paper since the gradients for attributions are computed with respect to the correct class.
+There was a bug in one of the parameters for generating explanations: "target" was initially set to 0 but it has to be set to the class for the input. This has been updated.
+The attack accuracies are different and results in some cases better than what was reported in the paper since the gradients are computed with respect to the correct class.
 The conclusions in the paper that model explanations leak sensitive attributes is still valid.
